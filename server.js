@@ -1,4 +1,5 @@
 const express = require("express");
+const mysql = require("mysql2");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const DiscoveryV1 = require('ibm-watson/discovery/v1');
@@ -26,6 +27,13 @@ server.use(bodyParser.urlencoded({ extended: false }));
 
 const port = process.env.PORT || 4000;
 
+const connection = mysql.createConnection({
+  host: process.env.HOST,
+  database: process.env.DATABASE,
+  user: process.env.MYSQL_USER,
+  password: process.env.PASSWORD,
+});
+
 server.listen(port, () => {
   console.log('Listening to port', port);
 });
@@ -49,4 +57,43 @@ server.post('/submit_query', (req, res) => {
     .catch(err => {
       console.log('error:', err);
     });
+});
+
+// API to Create Quote
+server.post("/create_quote", (req, res) => {
+  const { first_name, last_name, email, phone_number, address,
+          quote_number, already_customer, policy_start_date } = req.body;
+
+  console.log(first_name, last_name, email, phone_number, address, already_customer, policy_start_date );
+
+  connection.query(
+    `INSERT INTO missio20_team4.Quote (QuoteNumber, PolicyStartDate, AlreadyCustomer) VALUES (?, ?, ?);`,
+    [quote_number, policy_start_date, already_customer],
+    (error, result) => { 
+      if (error) {
+        console.log("Failed to create quote:" + error);
+        res.sendStatus(500);
+        return;
+      } 
+      else {
+        console.log(result);
+      }
+    }
+  );
+
+    connection.query(
+    `INSERT INTO missio20_team4.Customers (EmailAddress, FirstName, LastName, Address, QuoteNumber, PhoneNumber) VALUES (?, ?, ?, ?, ?, ?);`,
+    [email, first_name, last_name, address, quote_number, phone_number],
+    (error, result) => { 
+      if (error) {
+        console.log("Failed to create new quote:" + error);
+        res.sendStatus(500);
+        return;
+      } 
+      else {
+        console.log(result);
+        res.send("Quote created successfully");
+      }
+    }
+  );
 });
